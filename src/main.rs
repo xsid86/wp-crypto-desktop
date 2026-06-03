@@ -9,33 +9,27 @@ mod crypto;
 mod signer;
 mod storage;
 mod tron;
+mod models;
 
 use config::Config;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Тестовый прогон свипа на Nile. В бою параметры придут из очереди + vault.
-    let config = Config::nile_test();
+    let base_url = "http://wpcrypto.loc";
+    let api_key = "wpc_live_3f9a2b7c8d1e4f60";
+    let api_secret = "b1946ac92492d2347c6235b4d2611184a3e0f9c5d7e8a2b1";
 
-    // Тестовая мнемоника (на этапе GUI заменится расшифровкой vault по паролю).
-    let mnemonic = include_str!("test_mnemonic.txt").trim_end();
+    println!("Читаем очередь свипа...");
+    let items = api::fetch_queue(base_url, api_key, api_secret).await?;
 
-    let index = 1u32;
-    let owner = "TH7RSpHmJteMH3ZKyXHxWGF2ZpC2R3E2ds";
-    let to = "TB9AMjV3gq6XEJZm7x7y5nFjNHCVnR24uj";
-    let amount = 1_000_000u128; // 1 USDT
-    let fee_limit = 100_000_000i64; // 100 TRX потолок
-
-    println!("Свип 1 USDT: {} -> {}", owner, to);
-
-    let result =
-        signer::sweep_trc20(&config, mnemonic, index, owner, to, amount, fee_limit).await?;
-
-    println!("Готово. txID: {}", result.txid);
-    println!(
-        "Проверь: https://nile.tronscan.org/#/transaction/{}",
-        result.txid
-    );
+    println!("Записей в очереди: {}", items.len());
+    for item in &items {
+        println!(
+            "  #{}  {} {}  адрес={} index={} баланс={} статус={}",
+            item.id, item.symbol, item.network_code,
+            item.address, item.derivation_index, item.balance, item.status
+        );
+    }
 
     Ok(())
 }
